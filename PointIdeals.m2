@@ -31,8 +31,23 @@ degreeGenerators (List,ZZ) := {IntersectMaxIdeals => true} >> o -> (pts,d) -> (
 IGenD = method()
 IGenD (List,ZZ) := (pts,d) -> ideal(degreeGenerators(pts,d))
 
+hS = d -> binomial(n+d,n)
+
+firstHFeq = method()
+firstHFeq ZZ := r -> (d := 1; while binomial(n+d,n) < r do (d = d+1); return d)
+
 expectedNumGens = method()
-expectedNumGens ZZ := r -> (d := dr(r); {(d, (binomial(n+d,n)-r)), (d+1, max(binomial(n+d+1,n)-r-(n+1)*(binomial(n+d,n)-r), 0))})
+expectedNumGens ZZ := r -> (d := firstHFeq(r); {(d, hS(d)-r), (d+1, max(hS(d+1)-r-(n+1)*(hS(d)-r), 0))})
 
 isInteresting = method()
-isInteresting ZZ := ds -> ds_0_1 > n and ds_1_1 > 0
+isInteresting ZZ := r -> (g := expectedNumGens(r); g_0_1 > n and g_1_1 > 0)
+
+expectedHilbFun = method()
+expectedHilbFun (ZZ, List, ZZ) := (r,g,i) -> (
+    d := g_0_0;
+    if i < d then return hS(i);
+    return max(hS(i)-g_0_1*hS(i-d), r)
+)
+expectedHilbFun (ZZ,ZZ) := (r,i) -> expectedHilbFun(r, expectedNumGens(r), i)
+
+

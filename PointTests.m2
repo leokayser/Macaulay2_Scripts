@@ -1,31 +1,29 @@
 restart
 notify = true
-load "HilbertTest.m2"
+load "PointIdeals.m2"
 
-Z = randomQPoints(3)
-vanishingIdeal(Z)
-
-d = 7
-s_d = binomial(n+d,n)
-r = 33
+r = 41
+d = (expectedNumGens(r))_0_0
 Z = randomQPoints(r)
-I = IgenD(Z,d);
+I = IGenD(Z,d)
+
 
 M = R^1/I;
-Mred = R^1/Jall(Z);
-for i to 14 list hilbertFunction(i, M)
+Mred = R^1/vanishingIdeal(Z);
+
+for i to 12 list hilbertFunction(i, M)
 F = res M
 
 betti F
 
 
-dr = method()
-dr := r -> (d := 1; while binomial(n+d,n) < r do (d = d+1); return d)
-
-
-isInteresting(9)
-
-netList for i from 1 to 100 list (ds = expectedNumGens(i); if not isInteresting(ds) then continue; {i,ds})
+netList for r from 1 to 100 list (
+    g := expectedNumGens(r);
+    if not isInteresting(r) then continue;
+    e := g_0_0 + 1;
+    while expectedHilbFun(r,g,e) > r do e = e+1;
+    {r} | g | {(0..e) / (j->expectedHilbFun(r,j)) | (1:"...")}
+)
 
 
 S = QQ[z,x,y]
