@@ -2,22 +2,24 @@ restart
 notify = true
 load "PointIdeals.m2"
 
-r = 41
+r = 25
 d = (expectedNumGens(r))_0_0
 Z = randomQPoints(r)
-I = IGenD(Z,d)
+I = IGenD(Z,d);
 
 
 M = R^1/I;
 Mred = R^1/vanishingIdeal(Z);
 
-for i to 12 list hilbertFunction(i, M)
+for i to 12 list hilbertFunction(i, I)
 F = res M
-
+F' = res Mred
 betti F
+betti F'
+A = F'.dd_2;
+netList transpose apply(numcols A, i -> (apply(numrows A, j -> degree A_i_j)))
 
-
-netList for r from 1 to 100 list (
+netList for r from 1 to 50 list (
     g := expectedNumGens(r);
     if not isInteresting(r) then continue;
     e := g_0_0 + 1;
