@@ -31,6 +31,6 @@ findMonIdeals (ZZ,ZZ,ZZ) := (d,numGens,e) -> (
 
 findMonIdeals(5,3,2)
 
--- I = ideal(x^4*y, x^2*y^3, y^5)
+funny := d -> ideal(x^(d+1)*y^d, y^(d+1)*z^d, z^(d+1)*x^d)
 
 -- multMatrixRank(module I, 5, 1)

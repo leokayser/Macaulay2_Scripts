@@ -1,4 +1,4 @@
-n = 2
+n = 3
 R = QQ[x_0..x_n]
 
 randomQPoints = method(Options => true)
