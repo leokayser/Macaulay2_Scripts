@@ -5,46 +5,48 @@ interestingRange (ZZ,ZZ) := (n,d) -> (
     return (rmin,rmax);
 )
 
-idealHF = (n,r,j) -> binomial(j+n,n) - r;
-alternatingSum = (n,d,r,e) -> sum(floor(e/d)+1, k -> (-1)^k * binomial(e-k*d+n,n) * binomial(idealHF(n,r,d),k+1));
-expectedHF = (n,d,r,e) -> min(alternatingSum(n,d,r,e), idealHF(n,r,d+e));
+idealHF = (n,r,j) -> min(binomial(j+n,n), r);
+alternatingSum = (n,d,r,j) -> (
+    g := binomial(d+n,n) - idealHF(n,r,d);
+    return sum(0..floor(j/d), k -> (-1)^k * binomial(j-k*d+n,n) * binomial(g,k));
+);
+expectedHF = (n,d,r,j) -> max(alternatingSum(n,d,r,j), idealHF(n,r,j));
 
-expectedGapSize = (n,d,r) -> (
-    e := 1;
-    while alternatingSum(n,d,r,e) < idealHF(n,r,d+e) do e = e+1;
-    return e;
-)
-
-chopDegree = (n,r) -> (
+regH = (n,r) -> (
     j := 1;
-    while binomial(n+j,n) <= r do j = j+1;
+    while binomial(n+j,n) < r do j = j+1;
     return j;
 )
 
-testCase = method()
-testCase (PolynomialRing,ZZ) := (S,r) -> (
-    kk := coefficientRing S;
-    n := (numgens S)-1;
-    d := chopDegree(n,r);
+expectedGapSize = (n,r) -> (
+    d := regH(n,r);
+    if r >= binomial(n+d,n)-n then return infinity;
+    e := 1;
+    while alternatingSum(n,d,r,d+e) > idealHF(n,r,d+e) do e = e+1;
+    return e;
+)
 
-    identStr := concatenate("(d=", toString(d), ",r=", toString(r), ")");
+randomPoints = method()
+randomPoints (PolynomialRing,ZZ) := (S,r) -> (
+    n := numgens(S)-1;
+    kk := coefficientRing(S);
+    return for i from 1 to r list matrix{for j to n list random(kk)};
+)
 
-    e := expectedGapSize(n,d,r);
-    print(identStr | " -> expected gap = " | e);
-    
-    while true do (
-        randPts := for i from 1 to r list matrix{for j to n list random(kk)};
-        I := intersect(apply(randPts, pt -> minors(2, pt || basis(1,S))));
-        if #((entries super basis(d,I))_0) != idealHF(n,r,d) then continue;
+vanishIdeal = method()
+vanishIdeal (PolynomialRing,List) := (S,pts) -> intersect(apply(pts, pt -> minors(2, pt || basis(1,S))))
 
-        actualHF := e -> (
-            SeId := ideal(basis(e,S))*I;
-            return #((entries super basis(d+e, SeId))_0);
-        );
-        if actualHF(e) == idealHF(n,r,d+e) and  actualHF(e-1) == alternatingSum(n,d,r,e-1) then (
-            print(identStr | " valid!");
-            return randPts;
-        );
-        print(identStr | " invalid, trying again");
+verifyConj = method()
+verifyConj (Ideal,ZZ) := (I,r) -> (
+    S := ring(I);
+    n := numgens(S)-1;
+    d := regH(n,r);
+    J := ideal super basis(d,I);
+    gapend := d + expectedGapSize(n,r);
+    hs := hilbertSeries(J, Order=>gapend+1);
+    T := (ring hs)_0;
+    for j from d to gapend do (
+        if coefficient(T^j, hs) > expectedHF(n,d,r,j) then return false;
     );
+    return true;
 )
