@@ -55,10 +55,10 @@ verifyESC (Ideal,ZZ) := (I,r) -> (
 
     -- The case e=1, only need to check that IGC holds
     if gapend == d+1 then (
-        print("IGC case.");
-        elapsedTime(mgs := first entries mingens I);
-        beta1 = igcBeta1(n,r);
-        return number(mgs, f -> (degree f)_0 == d) == beta1#d and number(mgs, f -> (degree f)_0 == d+1) == beta1#(d+1);
+        -- print("IGC case.");
+        mb := minimalBetti(I, DegreeLimit=>d, LengthLimit=>1);
+        beta1 := igcBeta1(n,r);
+        return mb#(1,{d},d) == beta1#d and mb#?(1,{d+1},d+1) == false;
     );
 
     --print("Gappy case.");
@@ -72,11 +72,3 @@ verifyESC (Ideal,ZZ) := (I,r) -> (
     );
     return true;
 );
-
--- file = "P3_gaps"
--- for r to 100 do (
---     e = expectedGapSize(3,r);
---     if e == infinity then continue;
---     d = regH(3,r);
---     file << r << " " << d << " " << (d+e) << endl;
--- )

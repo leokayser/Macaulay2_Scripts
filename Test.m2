@@ -1,35 +1,71 @@
 load "Chopnumbers.m2"
 needsPackage("Points")
 
-f1 = (pts,S) -> points(sub(pts,S));
-f2 = (pts,S) -> ideal last projectivePoints(pts,S,VerifyPoints=>false);
+f1 = (ptlst,S) -> (
+    pts1 := matrix copy ptlst;
+    R1 := coefficientRing(S)[x_0..x_(numgens S - 1)];
+    use R1;
+    mat := sub(pts1,R1);
+    return points(mat);
+)
+f2 = (ptlst,S) -> (
+    pts2 := matrix copy ptlst;
+    R2 := coefficientRing(S)[x_0..x_(numgens S - 1)];
+    use R2;
+    (inG,G) := projectivePoints(pts2,R2,VerifyPoints=>false);
+    return ideal G;
+)
+
+-- Uses parallel tasks to find the ideal of points
+tryBothMethods = method()
+tryBothMethods (Matrix,Ring) := (pts,S) -> ( 
+    allowableThreads = 3;
+    t1 := schedule(f1,(entries pts,S));
+    t2 := schedule(f2,(entries pts,S));
+    while true do (
+        nanosleep 1000000000;
+        if isReady(t1) then (
+            I1 := taskResult(t1);
+            if instance(I1,Nothing) then(logProgress("points error!"); continue;);
+            logProgress("points won!");
+            try (if isReady(t2) then taskResult(t2) else (try cancelTask(t2); print("t2 terminated")));
+            return I1;
+        );
+        if isReady(t2) then (
+            I2 := taskResult(t2);
+            if instance(I2,Nothing) then(logProgress("projectivePoints error!"); continue;);
+            logProgress("projectivePoints won!");
+            try (if isReady(t1) then taskResult(t1) else (try cancelTask(t1); print("t1 terminated")));
+            return I2;
+        );
+    );
+)
+
 
 p = 1009
 
-testCase = method(Options => {IdealMethod => f1})
-testCase (ZZ,ZZ) := o -> (n,r) -> (
-    S := ZZ/p[x_0..x_n];
+
+testCase = method()
+testCase (ZZ,ZZ) := (n,r) -> (
+    S := ZZ/p[vars(0..n)];
     d := regH(n,r);
 
     identStr := concatenate("(n=", toString(n), ",d=", toString(d) , ",r=", toString(r), ")");
     print(identStr | " -> expected gap = " | expectedGapSize(n,r));
     
-    newfile := betterfilename(n,r);
-
     while true do (
         randPts := random(ZZ^(n+1),ZZ^r, Height=>p);
-        elapsedTime (I := o.IdealMethod(randPts,S));
-        if fileExists(newfile) then return null;
-        logProgress(betterfilename(n,r)|" Ideal calculated by "|toString(o.IdealMethod));
+        elapsedTime (I := ideal((projectivePoints(randPts,S))_1));
+        print("Ideal calculated.");
         if verifyESC(I,r) then (
-            if fileExists(newfile) then(logProgress(betterfilename(n,r)|" "|toString(o.IdealMethod)|" skip."); return null;);
             print(identStr | " valid!");
-            return (randPts,I);
+            return randPts;
         );
-        if fileExists(newfile) then return null;
         print(identStr | " invalid, trying again");
     );
 )
+
+
 
 padInt = (n,l) -> (
     str := toString(n);
@@ -39,13 +75,13 @@ padInt = (n,l) -> (
 filename = (dir,n,d,r) -> concatenate(dir,"/P",toString(n),"_d",padInt(d,2),"_r",padInt(r,3),".txt");
 betterfilename = (n,r) -> concatenate("P",padInt(n,2),"/d",padInt(regH(n,r),2),"_r",padInt(r,4),".txt");
 
---savePoints = method()
---savePoints (Matrix,String) := (pts,file) -> (
---    ptsList := entries transpose pts;
---    file << toString (n,p) << endl;
---    for pt in ptsList do (file << toString(pt) << endl);
---    file << close;
---)
+savePoints = method()
+savePoints (Matrix,String) := (pts,file) -> (
+    ptsList := entries transpose pts;
+    file << toString (n,p) << endl;
+    for pt in ptsList do (file << toString(pt) << endl);
+    file << close;
+)
 betterSavePoints = method()
 betterSavePoints (Matrix,Ideal,String) := (pts,I,file) -> (
     ptsList := entries transpose pts;
@@ -89,8 +125,8 @@ betterLoadPoints (String) := file -> (
     return (pts,I);
 )
 
-transformAll = method(Options => {IdealMethod => f1})
-transformAll (ZZ) := o -> n -> (
+transformAll = method()
+transformAll (ZZ) := n -> (
     prefix := "P" | padInt(n,2);
     if not fileExists prefix then mkdir prefix;
     S := ZZ/p[x_0..x_n];
@@ -98,62 +134,46 @@ transformAll (ZZ) := o -> n -> (
     logProgress("Starting transform "|toString(n));
     for file in prevCalcs do (
         if not match("P"|toString(n), file) then continue;
-        match("r.*",file);
-        m := lastMatch_0_0;
-        r := value substring((m + 1,#file-m-5), file);
-        newfile := betterfilename(n,r);
-        if fileExists(newfile) and not fileExists(newfile | toString(o.IdealMethod)) then continue;
+        --match("r.*",file);
+        --r := value(substring((lastMatch_0_0 + 1,lastMatch_0_0 - 3), file));
+        --print(class(r));
         pts := loadPoints("points/"|file);
+        r := numgens source pts;
+        newfile := betterfilename(n,r);
+        if fileExists(newfile) then continue;
         logProgress("Loaded file "|file);
-        I := o.IdealMethod(pts,S);
-
-        if fileExists(newfile) and not fileExists(newfile | toString(o.IdealMethod)) then
-            (logProgress("A: "|toString(o.IdealMethod)|" skipping ahead."); continue;);
-        if toString(o.IdealMethod) == "f1" and fileExists(newfile | "f2") then
-            (logProgress("B: f1 skipping ahead."); continue;);
-        if toString(o.IdealMethod) == "f2" and fileExists(newfile | "f1") then
-            (logProgress("B: f2 skipping ahead."); continue;);
-
-        (newfile | toString(o.IdealMethod)) << endl << close; -- Signal computation in progress
+        I := tryBothMethods(pts,S);
         logProgress(newfile | " ideal calculated");
+        assert verifyESC(I,r);
+        logProgress(newfile | " ESC verified");
         betterSavePoints(pts,I,newfile);
-        if verifyESC(I,r) then (
-            logProgress(newfile | " ESC verified");
-            removeFile(newfile | toString(o.IdealMethod));
-        ) else logProgress(newfile | " ESC not verified !!!!!!!!!!!!!!!");
     );
     logProgress(">>>>>>>>>>        "|toString(n)|" DONE!        <<<<<<<<<<");
-    quit;
+    exit;
 )
 
-testAll = method(Options => {IdealMethod => f1})
-testAll (ZZ,ZZ) := o -> (dmin,dmax) -> (
-    prefix := "P" | padInt(n,2);
-    if not fileExists prefix then mkdir prefix;
+testAll = method()
+testAll (ZZ,ZZ) := (dmin,dmax) -> (
+
     igc := if n <= 4 then true else false;
 
     for d from dmin to dmax do (
-        --print("-------- d = " | d | " --------");
+        print("-------- d = " | d | " --------");
         (rmin, rmax) := interestingRange(n,d, Igc=>igc);
-        --print("--- r = " | rmin | " ... " | rmax | " ---");
+        print("--- r = " | rmin | " ... " | rmax | " ---");
 
         for r from rmin to rmax do (
             if r == rmax then (
-                --print("(d=" | d | ",rmax=" | rmax | ") is already proven.");
+                print("(d=" | d | ",rmax=" | rmax | ") is already proven.");
                 continue;
             );
-            file := betterfilename(n,r);
+            file := filename("points",n,d,r);
             if fileExists(file) then (
-                --print(concatenate("\"",file,"\" exists."));
+                print(concatenate("\"",file,"\" exists."));
                 continue;
             );
-            result := testCase(n,r, IdealMethod=>o.IdealMethod);
-            if instance(result,Nothing) then continue;
-            logProgress(file | " done.");
-            (pts,I) := result;
-            betterSavePoints(pts,I,file);
+            elapsedTime (pts := testCase(n,r));
+            savePoints(pts,file);
         );
     );
-    logProgress(">>>>>  P^" | toString(n)| " all degrees [" | toString(dmin) | "," | toString(dmax) | "] verified!  <<<<<");
-    quit;
 )

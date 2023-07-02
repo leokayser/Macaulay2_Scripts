@@ -1,1 +1,2 @@
 scp TestSeq.m2 kayser@hydra.mis.mpg.de:/usr/people/kayser/choppedy
+scp kayser@hydra.mis.mpg.de:/usr/people/kayser/choppedy/TestSeq.m2 ~/Desktop
