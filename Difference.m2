@@ -19,11 +19,15 @@ diffTable (ZZ,ZZ) := (n,d) -> (
     return (Dl,l);
 );
 
-Dl = first diffTable(4,5)
-
--- file = "DiffPlot45.dat"
--- file << "t zero hI hC" << endl;
--- for tup in Dl do (
---     file << tup_0 << " 0 " << tup_1 << " " << tup_2 << endl;
--- )
--- file << close;
+--Dl = first diffTable(4,5)
+n=4; dmax=5;
+rmax = last interestingRange(n,dmax);
+file = "plotdata/gaps_P" | toString(n);
+file << "r d e de" << endl;
+for r from 1 to rmax do (
+    d = regH(n,r);
+    e = expectedGapSize(n,r);
+    if e == infinity then continue;
+    file << r << " " << d << " " << e << " " << (d+e) << endl;
+)
+file << close;

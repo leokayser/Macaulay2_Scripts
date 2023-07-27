@@ -126,6 +126,23 @@ transformAll (ZZ) := o -> n -> (
     quit;
 )
 
+testSpecific = method(Options => {IdealMethod => f1})
+testSpecific (ZZ,ZZ) := o -> (n,r) -> (
+    d := regH(n,r);
+    file := betterfilename(n,r);
+    if fileExists(file) then (
+        logProgress(concatenate("\"",file,"\" exists."));
+        quit;
+        return;
+    );
+    result := testCase(n,r, IdealMethod=>o.IdealMethod);
+    if instance(result,Nothing) then quit;
+    logProgress(file | " done.");
+    (pts,I) := result;
+    betterSavePoints(pts,I,file);
+    quit;
+)
+
 testAll = method(Options => {IdealMethod => f1})
 testAll (ZZ,ZZ) := o -> (dmin,dmax) -> (
     prefix := "P" | padInt(n,2);
