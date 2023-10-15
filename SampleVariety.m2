@@ -6,21 +6,6 @@ SampleVariety = new Type of Ideal
 -- sample:   a function which returns a random kk-point on the variety
 -- codim:    the codimension of X (we assume that X is linearly non-degenerate)
 
-sampleRandomPoint = method(Options => {MaxTrials => 3})
-sampleRandomPoint (SampleVariety) := o -> sv -> (
-    kk := coefficientRing ring sv;
-    for t from 1 to o.MaxTrials do (
-        try (
-            p := random(kk^1,kk^(sv.paramdim));
-            z := sv.param(p)
-        ) then (
-            return z;
-        ) else (
-            continue;
-        );
-    );
-    throw error "Failed to produce a kk-point.";
-)
 
 -- AFFINE Graßmannian convention (!) grassSV(k,n) -> Gr(k,n) = PGr(k-1,n-1)
 grassSV = method(Options => {kk => ZZ/101})
@@ -68,8 +53,12 @@ pn = n -> veroneseMatrix(n,1)
 productMatrix = M -> (
     if instance(M,Matrix) then return M;
     if #M == 1 then return M_0;
+    print M;
     m := toList(M) / projectivizeMatrix / entries;
+    print (m / matrix);
     p := fold((a,b) -> (a ** b) / toList / flatten, m);
+    print apply(p, v -> matrix{v});
+    print matrix p;
     colsToRemove = {0} | (accumulate(plus, 0, m/first/length));
     return submatrix'(matrix p, {0}, colsToRemove);
 )
@@ -88,11 +77,11 @@ nilpotentSV (ZZ) := o -> n -> (
 
     Jn := matrix for i from 1 to n list for j from 1 to n list if j==i+1 then 1 else 0;
     conjMap := mat -> (
-        A := reshape(o.kk^n, o.kk^n, mat);
+        A := random(o.kk^n, o.kk^n);
         N := A * Jn * A^-1;
         return submatrix'(flatten N, {n^2-1});
     );
-    params := new HashTable from {param => conjMap, paramdim => n^2, codim => n-1};
+    params := new HashTable from {sample => conjMap, codim => n-1};
     return new SampleVariety from merge(I', params, );
 )
 
@@ -104,9 +93,22 @@ linSpan (List,Ring) := (Z,S) -> (
     return ideal mingens minors(minorSize, mat');
 )
 
+
+
 toPoints = (Z,S) -> transpose sub(fold(Z, (z,z') ->  z||z'), S)
 genPtsIdeal = (S,r) -> intersect for i from 0 to r-1 list ideal drop(gens S, {i,i})
 
+getPoints = (sv,s,r) -> (
+    kk := coefficientRing ring sv;
+    N := numgens ring sv;
+    Zs := for i from 1 to s list sv.sample();
+    Zr := for i from s+1 to r list random(kk^1,kk^N);
+    return Zs | Zr;
+)
+
+
+HF = method()
+HF (Module,ZZ) := (M,t) -> numColumns super basis(t,M)
 
 hilbFunTable = args -> (
     tmax := last args;
@@ -114,9 +116,9 @@ hilbFunTable = args -> (
     return transpose for t to tmax list {t} | apply(Ms, M -> HF(M,t));
 )
 
-disp = (sv,tmax) -> (
-    r := sv#codim;
-    Z := for i from 1 to r list sampleRandomPoint(sv);
+disp = (sv,s,r,tmax) -> (
+    
+    Z := getPoints(sv,s,r);
 
     L := linSpan(Z,ring sv);
     J := sv + L;
@@ -125,7 +127,4 @@ disp = (sv,tmax) -> (
     print netList apply({{""},{" S "},{" I "},{" L "},{"I+L"},{"I_Z"}}, hilbFunTable(module ring sv, module sv, module L,module J, module IZ, tmax), (a,b)->a|b);
     return J;
 )
-
-HF = method()
-HF (Module,ZZ) := (M,t) -> numColumns super basis(t,M)
 

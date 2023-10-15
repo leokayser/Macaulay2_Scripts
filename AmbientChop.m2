@@ -1,5 +1,5 @@
 load "SampleVariety.m2"
 
 
-sv = grassSV(3,6);
-disp(sv,3)
+sv = rankSV(3,3,1);
+disp(sv,1,2,3);
