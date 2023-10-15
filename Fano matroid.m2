@@ -8,6 +8,7 @@ B = bases M
 M'= dual M
 C'= circuits M'
 
+S = QQ[x_0..x_6]
 f = sum(B, b -> product(toList b, i -> x_i))
 f' = flatten entries diff(vars S, f)
 Hs = apply(f', g -> diff(vars S,diff(transpose vars S, g)))
