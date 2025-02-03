@@ -50,12 +50,13 @@ end
 restart
 load "RecoverForms.m2"
 
-S = QQ[W..Z];
-F := random(5,S)
-recover(F,3)
+S = QQ[X..Z];
+F = random(5,S);
+ideal recover(F,3) == ideal F
 I = inverseSystem(F, DividedPowers=>true)
-J = chop(I,2)
-super basis(3,J)
+minimalBetti I
+J = chop(I,3)
+HFtable(I,J)
 
 
 
