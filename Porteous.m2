@@ -14,24 +14,35 @@ recursiveZ = method()
 recursiveZ FlagBundle := Gr -> (
     m := Gr.BundleRanks#0 - 1;
     r := Gr.BundleRanks#1;
-    R := Gr.IntersectionRing;
     ee := for j from 0 to m+1 list schubertCycle(toList(j:1)|toList((m+1-j):0), Gr);
-    h := i -> schubertCycle({i}|toList(m:0), Gr);
-    print ee; print h;
+    h := i -> if i <= r then schubertCycle({i}|toList(m:0), Gr) else 0;
 
-    ff := toList((m+1):0_R);
-    for i from 0 to r do (
-        Z' := sum(1..(m+1),
-            j -> (-1)^(j-1) * ee#j * ff#(i-j)
-        ) + h(i);
+    ff := toList((m+1):0);
+    for i from 0 to r*m do (
+        Z' := sum(1..(m+1), j -> (-1)^(j-1) * ee#j * ff#(i-j)) + h(i);
         print("Pass "|toString(i)|": "|toString(Z'));
         ff = insert(i,Z',ff);
     );
-    return ff#r;
+    return ff#(r*m);
 )
 recursiveZ (ZZ,ZZ) := (r,m) -> recursiveZ flagBundle({m+1,r}, VariableNames => {,c})
 
+Hclass = Gr -> (
+    k := Gr.BundleRanks#0;
+    n := Gr.BundleRanks#1 + k;
+    ee := for j from 0 to k list schubertCycle(toList(j:1)|toList((k-j):0), Gr);
+    hlist = (for i from 0 to n-k list schubertCycle(({i}|toList((k-1):0)), Gr)) | toList(max(2*k-n,0):0);
+    for i from n-k+1 to k*(n-k) do (
+        print netList transpose for j from 1 to k list {(-1)^(j-1), ee#j, hlist#(i-j)};
+        H := sum(1..k, j -> (-1)^(j-1) * ee#j * hlist#(i-j));
+        print H;
+        hlist = insert(i, H, hlist);
+    );
+    return hlist_(toList(0..k*(n-k)));
+)
+
 end
+
 
 restart
 load "Porteous.m2"
@@ -39,7 +50,7 @@ load "Porteous.m2"
 (r,m) = (2,2)
 Gr = flagBundle({m+1,r}, VariableNames => {,c});
 Zrec = recursiveZ(Gr);
---placeholderToSchubertBasis(Zrec, Gr)
+placeholderToSchubertBasis(Zrec, Gr)
 
 e = r+m+2; f = 2*(m+1); k = m+2;
 --Gr = flagBundle({m+1,r}, VariableNames => {,c});

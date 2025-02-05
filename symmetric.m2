@@ -10,12 +10,20 @@ elementarySymmetric phi h(2,R')
 
 ee = {1_R} | elementarySymmetricPolynomials R 
 
-hhdecomp = r -> (
-    ff := toList((m+1):0_R);
-    for i from 0 to r do (
-        Z' := sum(1..(m+1), j -> (-1)^(j-1) * ee_j * ff#(i-j)) + h(i,R);
-        ff = insert(i,Z',ff);
-    );
-    return ff#r;
+-- hhdecomp = r -> (
+--     ff := toList((m+1):0_R);
+--     for i from 0 to r do (
+--         Z' := sum(1..(m+1), j -> (-1)^(j-1) * ee_j * ff#(i-j)) + h(i,R);
+--         ff = insert(i,Z',ff);
+--     );
+--     return ff#r;
+-- )
+-- hhdecomp 3 == phi h(3,R')
+
+h' = i -> (
+    if i < 0 then return 0;
+    if i == 0 then return 1;
+    return sum(1..(m+1), j -> (-1)^(j-1) * ee#j * h'(i-j));
 )
-hhdecomp 2 == phi h(2,R')
+
+for i from 0 to 5 do (print h'(i))
