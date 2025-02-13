@@ -20,7 +20,7 @@ recursiveZ FlagBundle := Gr -> (
     ff := toList((m+1):0);
     for i from 0 to r*m do (
         Z' := sum(1..(m+1), j -> (-1)^(j-1) * ee#j * ff#(i-j)) + h(i);
-        print("Pass "|toString(i)|": "|toString(Z'));
+        print("Pass "|toString(i)|": "|toString(placeholderToSchubertBasis(Z',Gr)));
         ff = insert(i,Z',ff);
     );
     return ff#(r*m);
